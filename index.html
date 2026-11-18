@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supermarket Simulator 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            user-select: none;
+            background: #0f172a
+        }
+
+        #viewport {
+            width: 100vw;
+            height: 100vh;
+            display: block
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 14px;
+            height: 14px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10
+        }
+
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, .9)
+        }
+
+        #crosshair::before {
+            top: 6px;
+            left: 0;
+            width: 14px;
+            height: 2px
+        }
+
+        #crosshair::after {
+            top: 0;
+            left: 6px;
+            width: 2px;
+            height: 14px
+        }
+
+        #prompt {
+            position: absolute;
+            top: 58%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            background: rgba(0, 0, 0, .85);
+            padding: 9px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            display: none;
+            z-index: 15;
+            pointer-events: none;
+            font-size: 1rem
+        }
+
+        #start {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, .96);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            z-index: 100;
+            cursor: pointer
+        }
+
+        #start h1 {
+            font-size: 2.6rem;
+            color: #f59e0b;
+            margin-bottom: 8px
+        }
+
+        #start p {
+            color: #94a3b8;
+            margin-bottom: 22px
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            border: none;
+            padding: 16px 48px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, .4)
+        }
+
+        .btn:hover {
+            transform: scale(1.04)
+        }
+
+        #hud-l {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            z-index: 20
+        }
+
+        .box {
+            background: rgba(15, 23, 42, .9);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #f59e0b
+        }
+
+        .box .l {
+            font-size: .72rem;
+            color: #f59e0b;
+            font-weight: 700
+        }
+
+        .box .v {
+            font-size: 1.05rem;
+            font-weight: 600
+        }
+
+        #ctrls {
+            background: rgba(15, 23, 42, .88);
+            color: #e2e8f0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: .85rem;
+            line-height: 1.65
+        }
+
+        #ctrls span {
+            display: inline-block;
+            background: #334155;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-right: 4px;
+            min-width: 18px;
+            text-align: center
+        }
+
+        #hud-r {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            gap: 10px;
+            z-index: 20
+        }
+
+        #hud-r .box {
+            border-left: none
+        }
+
+        #cash {
+            color: #4ade80;
+            font-weight: 700
+        }
+
+        #receipt {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            width: 250px;
+            background: rgba(15, 23, 42, .92);
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            z-index: 20
+        }
+
+        #receipt h3 {
+            font-size: .9rem;
+            color: #38bdf8;
+            margin-bottom: 6px;
+            border-bottom: 1px dashed #475569;
+            padding-bottom: 4px
+        }
+
+        #ilist {
+            list-style: none;
+            max-height: 130px;
+            overflow-y: auto;
+            font-size: .8rem;
+            font-family: monospace
+        }
+
+        #ilist li {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px
+        }
+
+        #total {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px dashed #475569;
+            font-weight: bold;
+            color: #4ade80;
+            display: flex;
+            justify-content: space-between
+        }
+
+        #order {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 12px;
+            padding: 18px;
+            z-index: 80;
+            display: none;
+            color: #fff;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, .6)
+        }
+
+        #order h2 {
+            color: #38bdf8;
+            margin-bottom: 4px
+        }
+
+        #order .sub {
+            color: #94a3b8;
+            font-size: .85rem;
+            margin-bottom: 12px
+        }
+
+        .pbtn {
+            display: block;
+            width: 100%;
+            padding: 11px 14px;
+            margin: 5px 0;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            text-align: left
+        }
+
+        .pbtn:hover {
+            background: #334155
+        }
+
+        .cbtn {
+            margin-top: 12px;
+            width: 100%;
+            padding: 10px;
+            background: #ef4444;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer
+        }
+
+        #status {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, .92);
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: 700;
+            z-index: 20
+        }
+
+        #status.open {
+            color: #4ade80
+        }
+
+        #status.closed {
+            color: #f87171
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+</head>
+
+<body>
+    <div id="crosshair"></div>
+    <div id="prompt"></div>
+    <div id="start">
+        <h1>🛒 Supermarket Simulator 3D</h1>
+        <p>Pegue a caixa → Coloque no chão → Abra ela</p>
+        <button class="btn" id="btn">INICIAR TURNO</button>
+    </div>
+    <div id="hud-l">
+        <div class="box">
+            <div class="l">OBJECTIVE</div>
+            <div class="v">Arrume a loja e abra</div>
+            <div style="font-size:.85rem;color:#94a3b8;margin-top:2px" id="prog">0 produtos estocados</div>
+        </div>
+        <div id="ctrls">
+            <div><span>E</span> Interagir / Pegar / Abrir</div>
+            <div><span>G</span> Soltar</div>
+            <div><span>R</span> Arremessar</div>
+            <div><span>M</span> Escanear</div>
+            <div><span>WASD</span> Andar</div>
+        </div>
+    </div>
+    <div id="hud-r">
+        <div class="box" id="cash">$ <span id="cash-v">0.00</span></div>
+        <div class="box"><span id="time">08:00</span></div>
+    </div>
+    <div id="status" class="closed">LOJA FECHADA</div>
+    <div id="receipt">
+        <h3>🧾 Vendas</h3>
+        <ul id="ilist">
+            <li style="color:#94a3b8;text-align:center">Nenhuma venda</li>
+        </ul>
+        <div id="total"><span>TOTAL</span><span>$ <span id="tot">0.00</span></span></div>
+    </div>
+    <div id="order">
+        <h2>💻 Terminal de Pedidos</h2>
+        <div class="sub">A caixa cai fechada. Pegue → Coloque → Abra</div>
+        <button class="pbtn" data-k="MILK">🥛 SUSU Milk</button>
+        <button class="pbtn" data-k="CHIPS">🥔 Chips</button>
+        <button class="pbtn" data-k="CAN">🥫 Lata</button>
+        <button class="pbtn" data-k="CEREAL">🥣 Cereal</button>
+        <button class="pbtn" data-k="SODA">🥤 Refrigerante</button>
+        <button class="pbtn" data-k="COOKIE">🍪 Biscoito</button>
+        <button class="pbtn" data-k="MEAT">🥩 Carne</button>
+        <button class="pbtn" data-k="CHICKEN">🍗 Frango</button>
+        <button class="cbtn" id="close">Fechar</button>
+    </div>
+    <div id="viewport"></div>
+
+    <script>
+        const audio = new (window.AudioContext || window.webkitAudioContext)();
+        function beep(f = 1400, t = 'sine', d = .09, v = .14) { if (audio.state === 'suspended') audio.resume(); const o = audio.createOscillator(), g = audio.createGain(); o.type = t; o.frequency.value = f; g.gain.setValueAtTime(v, audio.currentTime); g.gain.exponentialRampToValueAtTime(.001, audio.currentTime + d); o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + d) }
+        const playBeep = () => beep(1400); const playGrab = () => beep(320, 'triangle', .07, .1); const playDoor = () => beep(200, 'sine', .25, .06); const playOpen = () => beep(600, 'triangle', .15, .12);
+
+        const vp = document.getElementById('viewport');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb);
+        scene.fog = new THREE.Fog(0x87ceeb, 50, 120);
+
+        const cam = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, .1, 250);
+        const ren = new THREE.WebGLRenderer({ antialias: true });
+        ren.setSize(innerWidth, innerHeight);
+        ren.shadowMap.enabled = true;
+        ren.shadowMap.type = THREE.PCFSoftShadowMap;
+        vp.appendChild(ren.domElement);
+
+        const world = new CANNON.World();
+        world.gravity.set(0, -9.82, 0);
+        world.broadphase = new CANNON.NaiveBroadphase();
+        const defMat = new CANNON.Material('def');
+        world.addContactMaterial(new CANNON.ContactMaterial(defMat, defMat, { friction: .55, restitution: .03 }));
+
+        scene.add(new THREE.AmbientLight(0xffffff, .55));
+        const sun = new THREE.DirectionalLight(0xfff7ed, .9);
+        sun.position.set(25, 35, 20); sun.castShadow = true;
+        sun.shadow.mapSize.set(2048, 2048);
+        scene.add(sun);
+
+        function texFloor() {
+            const c = document.createElement('canvas'); c.width = 512; c.height = 512;
+            const x = c.getContext('2d');
+            x.fillStyle = '#e8dcc8'; x.fillRect(0, 0, 512, 512);
+            x.strokeStyle = '#c9b8a0'; x.lineWidth = 2.5;
+            for (let i = 0; i <= 512; i += 64) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 512); x.stroke(); x.beginPath(); x.moveTo(0, i); x.lineTo(512, i); x.stroke() }
+            const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(14, 14); return t;
+        }
+        function texCardboard() {
+            const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+            const x = c.getContext('2d');
+            x.fillStyle = '#c4a574'; x.fillRect(0, 0, 256, 256);
+            x.strokeStyle = '#a67c52'; x.lineWidth = 4; x.strokeRect(10, 10, 236, 236);
+            x.fillStyle = '#5c4033'; x.font = 'bold 22px Arial'; x.textAlign = 'center';
+            x.fillText('DELIVERY', 128, 110); x.font = '14px Arial'; x.fillText('HANDLE WITH CARE', 128, 140);
+            return new THREE.CanvasTexture(c);
+        }
+        function texSign() {
+            const c = document.createElement('canvas'); c.width = 1024; c.height = 180;
+            const x = c.getContext('2d');
+            x.fillStyle = '#c41e3a'; x.fillRect(0, 0, 1024, 180);
+            x.fillStyle = '#ffffff'; x.font = 'bold 110px Arial Black, Arial'; x.textAlign = 'center'; x.textBaseline = 'middle';
+            x.fillText('SUPERMARKET', 512, 95);
+            return new THREE.CanvasTexture(c);
+        }
+
+        const floorTex = texFloor(), cardTex = texCardboard(), signTex = texSign();
+
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 32), new THREE.MeshStandardMaterial({ map: floorTex, roughness: .4 }));
+        floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+        const gBody = new CANNON.Body({ mass: 0, shape: new CANNON.Plane(), material: defMat });
+        gBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2); world.addBody(gBody);
+
+        const road = new THREE.Mesh(new THREE.PlaneGeometry(90, 60), new THREE.MeshStandardMaterial({ color: 0x333333, roughness: .95 }));
+        road.rotation.x = -Math.PI / 2; road.position.set(0, -.03, 38); scene.add(road);
+        const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(90, 16), new THREE.MeshStandardMaterial({ color: 0xb8b8b8, roughness: .8 }));
+        sidewalk.rotation.x = -Math.PI / 2; sidewalk.position.set(0, .01, 18); scene.add(sidewalk);
+
+        function building(x, z, w, h, d, col) {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color: col, roughness: .7 }));
+            m.position.set(x, h / 2, z); m.castShadow = true; scene.add(m);
+            const b = new CANNON.Body({ mass: 0, shape: new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2)), material: defMat });
+            b.position.set(x, h / 2, z); world.addBody(b);
+        }
+        building(-28, 42, 12, 18, 14, 0x64748b);
+        building(-14, 45, 11, 14, 12, 0x78716c);
+        building(2, 48, 13, 22, 13, 0x57534e);
+        building(18, 44, 12, 16, 14, 0x44403c);
+        building(32, 40, 14, 20, 15, 0x334155);
+
+        function tree(x, z) {
+            const g = new THREE.Group();
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.28, .38, 2.6, 8), new THREE.MeshStandardMaterial({ color: 0x5c4033 }));
+            trunk.position.y = 1.3; g.add(trunk);
+            const leaves = new THREE.Mesh(new THREE.SphereGeometry(2.1, 10, 10), new THREE.MeshStandardMaterial({ color: 0x166534 }));
+            leaves.position.y = 3.6; g.add(leaves);
+            g.position.set(x, 0, z); scene.add(g);
+            const b = new CANNON.Body({ mass: 0, shape: new CANNON.Cylinder(.35, .35, 3.5, 8), material: defMat });
+            b.position.set(x, 1.75, z); world.addBody(b);
+        }
+        tree(-22, 22); tree(-16, 26); tree(16, 24); tree(24, 28); tree(-8, 30);
+
+        function car(x, z, col) {
+            const g = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(2.3, .75, 4.4), new THREE.MeshStandardMaterial({ color: col }));
+            body.position.y = .55; g.add(body);
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.0, .65, 2.3), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+            cabin.position.set(0, 1.15, -.3); g.add(cabin);
+            g.position.set(x, 0, z); scene.add(g);
+            const b = new CANNON.Body({ mass: 0, shape: new CANNON.Box(new CANNON.Vec3(1.15, .6, 2.2)), material: defMat });
+            b.position.set(x, .6, z); world.addBody(b);
+        }
+        car(-10, 28, 0xdc2626); car(5, 31, 0x2563eb); car(18, 27, 0x16a34a);
+
+        const frontMat = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: .7 });
+        function wall(x, y, z, w, h, d) {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), frontMat);
+            m.position.set(x, y, z); m.receiveShadow = true; scene.add(m);
+            const b = new CANNON.Body({ mass: 0, shape: new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2)), material: defMat });
+            b.position.set(x, y, z); world.addBody(b);
+        }
+        wall(0, 3, -14, 38, 6, .5);
+        wall(-19, 3, 0, .5, 6, 28);
+        wall(19, 3, 0, .5, 6, 28);
+        wall(-12.5, 2.2, 14, 11, 4.4, .5);
+        wall(12.5, 2.2, 14, 11, 4.4, .5);
+        wall(0, 4.8, 14, 14, 1.6, .5);
+
+        const banner = new THREE.Mesh(new THREE.BoxGeometry(22, 1.6, .25), new THREE.MeshStandardMaterial({ color: 0xc41e3a }));
+        banner.position.set(0, 5.6, 14.2); scene.add(banner);
+        const signP = new THREE.Mesh(new THREE.PlaneGeometry(20, 1.3), new THREE.MeshBasicMaterial({ map: signTex, transparent: true }));
+        signP.position.set(0, 5.6, 14.35); scene.add(signP);
+
+        const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xe0f2fe, transparent: true, opacity: .28, transmission: .92 });
+        const frameMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: .5 });
+        function glassDoor() {
+            const g = new THREE.Group();
+            const glass = new THREE.Mesh(new THREE.BoxGeometry(2.7, 3.4, .06), glassMat); glass.position.y = 1.7; g.add(glass);
+            const top = new THREE.Mesh(new THREE.BoxGeometry(2.7, .12, .1), frameMat); top.position.y = 3.4; g.add(top);
+            const bot = new THREE.Mesh(new THREE.BoxGeometry(2.7, .14, .1), frameMat); bot.position.y = .1; g.add(bot);
+            const left = new THREE.Mesh(new THREE.BoxGeometry(.1, 3.4, .1), frameMat); left.position.set(-1.35, 1.7, 0); g.add(left);
+            const right = new THREE.Mesh(new THREE.BoxGeometry(.1, 3.4, .1), frameMat); right.position.set(1.35, 1.7, 0); g.add(right);
+            return g;
+        }
+        const leftDoor = glassDoor(); leftDoor.position.set(-1.4, 0, 14); scene.add(leftDoor);
+        const rightDoor = glassDoor(); rightDoor.position.set(1.4, 0, 14); scene.add(rightDoor);
+
+        let doorOpen = false;
+        function updDoors(dt) {
+            let near = cam.position.distanceTo(new THREE.Vector3(0, 1.6, 14)) < 7;
+            customers.forEach(c => { if (c.mesh.position.distanceTo(new THREE.Vector3(0, 0, 14)) < 7) near = true });
+            const t = near ? 2.7 : 0;
+            if (near && !doorOpen) { playDoor(); doorOpen = true }
+            if (!near) doorOpen = false;
+            leftDoor.position.x = THREE.MathUtils.lerp(leftDoor.position.x, -1.4 - t, dt * 5);
+            rightDoor.position.x = THREE.MathUtils.lerp(rightDoor.position.x, 1.4 + t, dt * 5);
+        }
+
+        const ceil = new THREE.Mesh(new THREE.PlaneGeometry(40, 32), new THREE.MeshStandardMaterial({ color: 0xf8fafc }));
+        ceil.rotation.x = Math.PI / 2; ceil.position.y = 6; scene.add(ceil);
+        function lamp(x, z) {
+            const f = new THREE.Mesh(new THREE.BoxGeometry(2.6, .08, .55), new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }));
+            f.position.set(x, 5.85, z); scene.add(f);
+            const l = new THREE.PointLight(0xfffaf0, .5, 13); l.position.set(x, 5.6, z); scene.add(l);
+        }
+        lamp(-9, -6); lamp(9, -6); lamp(-9, 2); lamp(9, 2); lamp(0, -2); lamp(0, 6);
+
+        function gondola(x, z) {
+            const g = new THREE.Group();
+            const metal = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: .4 });
+            const shelf = new THREE.MeshStandardMaterial({ color: 0xe2e8f0 });
+            [-2.15, 2.15].forEach(sx => {
+                const s = new THREE.Mesh(new THREE.BoxGeometry(.08, 2.4, .95), metal); s.position.set(sx, 1.2, 0); g.add(s);
+            });
+            [0.4, 1.1, 1.8].forEach(y => {
+                const sh = new THREE.Mesh(new THREE.BoxGeometry(4.2, .07, .9), shelf); sh.position.y = y; g.add(sh);
+                const b = new CANNON.Body({ mass: 0, shape: new CANNON.Box(new CANNON.Vec3(2.1, .04, .45)), material: defMat });
+                b.position.set(x, y, z); world.addBody(b);
+            });
+            g.position.set(x, 0, z); scene.add(g);
+        }
+        gondola(-9, -6); gondola(9, -6); gondola(-9, 1); gondola(9, 1); gondola(-9, 7); gondola(9, 7);
+
+        function meatFridge(x, z) {
+            const g = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(3.3, .95, 1.1), new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: .3 }));
+            body.position.y = .47; g.add(body);
+            const glass = new THREE.Mesh(new THREE.BoxGeometry(3.1, .6, .95), new THREE.MeshPhysicalMaterial({ color: 0xbae6fd, transparent: true, opacity: .35 }));
+            glass.position.y = 1.2; g.add(glass);
+            g.position.set(x, 0, z); scene.add(g);
+            const b = new CANNON.Body({ mass: 0, shape: new CANNON.Box(new CANNON.Vec3(1.65, .7, .55)), material: defMat });
+            b.position.set(x, .7, z); world.addBody(b);
+        }
+        meatFridge(-11, -11); meatFridge(-6, -11); meatFridge(-1, -11);
+
+        const counter = new THREE.Mesh(new THREE.BoxGeometry(5.5, 1.05, 1.8), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+        counter.position.set(0, .52, 7); scene.add(counter);
+        const cBody = new CANNON.Body({ mass: 0, shape: new CANNON.Box(new CANNON.Vec3(2.75, .53, .9)), material: defMat });
+        cBody.position.set(0, .53, 7); world.addBody(cBody);
+        const scanner = new THREE.Mesh(new THREE.BoxGeometry(1.15, .07, .8), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+        scanner.position.set(0, 1.12, 7); scene.add(scanner);
+
+        const deskGroup = new THREE.Group();
+        const deskTop = new THREE.Mesh(new THREE.BoxGeometry(1.6, .08, 0.9), new THREE.MeshStandardMaterial({ color: 0x4a3728 }));
+        deskTop.position.set(0, 0.82, 0); deskGroup.add(deskTop);
+        [[-0.7, -0.35], [0.7, -0.35], [-0.7, 0.35], [0.7, 0.35]].forEach(([lx, lz]) => {
+            const leg = new THREE.Mesh(new THREE.BoxGeometry(.08, .82, .08), new THREE.MeshStandardMaterial({ color: 0x2d2d2d }));
+            leg.position.set(lx, 0.41, lz); deskGroup.add(leg);
+        });
+        const monitor = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.48, 0.06), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+        monitor.position.set(0, 1.25, -0.15); deskGroup.add(monitor);
+        const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.4), new THREE.MeshBasicMaterial({ color: 0x1e40af }));
+        screen.position.set(0, 1.25, -0.12); deskGroup.add(screen);
+        deskGroup.position.set(15.5, 0, 8); scene.add(deskGroup);
+        const deskBody = new CANNON.Body({ mass: 0, shape: new CANNON.Box(new CANNON.Vec3(0.8, 0.45, 0.45)), material: defMat });
+        deskBody.position.set(15.5, 0.45, 8); world.addBody(deskBody);
+
+        const signB = new THREE.Mesh(new THREE.BoxGeometry(1.9, .75, .08), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+        signB.position.set(0, 2.9, 14.5); scene.add(signB);
+        function makeSign(txt, col) {
+            const c = document.createElement('canvas'); c.width = 256; c.height = 100;
+            const x = c.getContext('2d'); x.fillStyle = col; x.fillRect(0, 0, 256, 100);
+            x.fillStyle = '#fff'; x.font = 'bold 32px Arial'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, 128, 50);
+            return new THREE.CanvasTexture(c);
+        }
+        const openT = makeSign('LOJA ABERTA', '#16a34a'), closedT = makeSign('LOJA FECHADA', '#dc2626');
+        const signP2 = new THREE.Mesh(new THREE.PlaneGeometry(1.8, .65), new THREE.MeshBasicMaterial({ map: closedT }));
+        signP2.position.set(0, 2.9, 14.55); scene.add(signP2);
+        let storeOpen = false, stocked = 0;
+
+        const PRODUCTS = {
+            MILK: { name: 'SUSU Milk', price: 4.5, type: 'milk' },
+            CHIPS: { name: 'Chips', price: 3.2, type: 'chips' },
+            CAN: { name: 'Lata', price: 2.8, type: 'can' },
+            CEREAL: { name: 'Cereal', price: 5.9, type: 'cereal' },
+            SODA: { name: 'Refri', price: 2.5, type: 'soda' },
+            COOKIE: { name: 'Biscoito', price: 3.8, type: 'cookie' },
+            MEAT: { name: 'Carne', price: 22.9, type: 'meat' },
+            CHICKEN: { name: 'Frango', price: 14.5, type: 'chicken' }
+        };
+        function prodMesh(info) {
+            const g = new THREE.Group();
+            if (info.type === 'milk') g.add(new THREE.Mesh(new THREE.BoxGeometry(.2, .3, .11), new THREE.MeshStandardMaterial({ color: 0xf8fafc })));
+            else if (info.type === 'chips') g.add(new THREE.Mesh(new THREE.BoxGeometry(.17, .26, .07), new THREE.MeshStandardMaterial({ color: 0xf59e0b })));
+            else if (info.type === 'can') g.add(new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, .16, 12), new THREE.MeshStandardMaterial({ color: 0x0ea5e9 })));
+            else if (info.type === 'cereal') g.add(new THREE.Mesh(new THREE.BoxGeometry(.18, .28, .07), new THREE.MeshStandardMaterial({ color: 0xef4444 })));
+            else if (info.type === 'soda') g.add(new THREE.Mesh(new THREE.CylinderGeometry(.065, .065, .2, 12), new THREE.MeshStandardMaterial({ color: 0xdc2626 })));
+            else if (info.type === 'meat') g.add(new THREE.Mesh(new THREE.BoxGeometry(.26, .07, .16), new THREE.MeshStandardMaterial({ color: 0x9f1239 })));
+            else if (info.type === 'chicken') g.add(new THREE.Mesh(new THREE.BoxGeometry(.22, .09, .18), new THREE.MeshStandardMaterial({ color: 0xfbbf24 })));
+            else g.add(new THREE.Mesh(new THREE.BoxGeometry(.16, .11, .16), new THREE.MeshStandardMaterial({ color: 0xa16207 })));
+            g.children.forEach(c => c.castShadow = true); return g;
+        }
+        let products = [];
+        function spawnProd(key, x, y, z) {
+            const info = PRODUCTS[key];
+            const mesh = prodMesh(info); scene.add(mesh);
+            const body = new CANNON.Body({ mass: .35, shape: new CANNON.Box(new CANNON.Vec3(.11, .13, .09)), material: defMat });
+            body.position.set(x, y, z); body.linearDamping = .5; body.angularDamping = .5; world.addBody(body);
+            const p = { mesh, body, info, key, scanned: false, reserved: false, heldBy: null };
+            products.push(p); return p;
+        }
+
+        // ========== SISTEMA DE CAIXAS INTERATIVAS ==========
+        let boxes = [];          // todas as caixas
+        let heldBox = null;      // caixa que o jogador está carregando
+
+        function createBoxMesh(open = false) {
+            const g = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ map: cardTex, roughness: 0.85 });
+
+            // fundo
+            const bottom = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.08, 1.0), mat);
+            bottom.position.y = 0.04; g.add(bottom);
+
+            // laterais
+            const sideMat = new THREE.MeshStandardMaterial({ color: 0xb8956a });
+            const h = open ? 0.25 : 0.55;
+            // frente/trás
+            const front = new THREE.Mesh(new THREE.BoxGeometry(1.4, h, 0.06), sideMat);
+            front.position.set(0, h / 2 + 0.04, 0.47); g.add(front);
+            const back = new THREE.Mesh(new THREE.BoxGeometry(1.4, h, 0.06), sideMat);
+            back.position.set(0, h / 2 + 0.04, -0.47); g.add(back);
+            // lados
+            const left = new THREE.Mesh(new THREE.BoxGeometry(0.06, h, 1.0), sideMat);
+            left.position.set(-0.67, h / 2 + 0.04, 0); g.add(left);
+            const right = new THREE.Mesh(new THREE.BoxGeometry(0.06, h, 1.0), sideMat);
+            right.position.set(0.67, h / 2 + 0.04, 0); g.add(right);
+
+            if (!open) {
+                // tampa
+                const lid = new THREE.Mesh(new THREE.BoxGeometry(1.38, 0.06, 0.98), mat);
+                lid.position.y = 0.62; g.add(lid);
+            }
+
+            g.children.forEach(c => c.castShadow = true);
+            return g;
+        }
+
+        function dropBoxFromSky(key, qty = 8) {
+            const x = (Math.random() - 0.5) * 5;
+            const z = 16.0 + Math.random() * 1.0;
+
+            const mesh = createBoxMesh(false); // fechada
+            mesh.position.set(x, 12, z);
+            scene.add(mesh);
+
+            const body = new CANNON.Body({
+                mass: 25,
+                shape: new CANNON.Box(new CANNON.Vec3(0.7, 0.35, 0.5)),
+                material: defMat
+            });
+            body.position.set(x, 12, z);
+            body.linearDamping = 0.4;
+            world.addBody(body);
+
+            const box = {
+                mesh,
+                body,
+                key,
+                qty,
+                open: false,
+                productsSpawned: false
+            };
+            boxes.push(box);
+
+            // sincroniza enquanto cai
+            function sync() {
+                mesh.position.copy(body.position);
+                mesh.quaternion.copy(body.quaternion);
+                if (body.position.y > 0.5) {
+                    requestAnimationFrame(sync);
+                } else {
+                    // pousou → trava
+                    body.mass = 0;
+                    body.type = CANNON.Body.STATIC;
+                    body.velocity.set(0, 0, 0);
+                    body.angularVelocity.set(0, 0, 0);
+                    body.position.y = 0.35;
+                    mesh.position.y = 0.35;
+                }
+            }
+            sync();
+            playBeep();
+        }
+
+        function openBox(box) {
+            if (box.open || box.productsSpawned) return;
+            box.open = true;
+            box.productsSpawned = true;
+
+            // troca o visual para caixa aberta
+            scene.remove(box.mesh);
+            const openMesh = createBoxMesh(true);
+            openMesh.position.copy(box.body.position);
+            openMesh.quaternion.copy(box.body.quaternion);
+            scene.add(openMesh);
+            box.mesh = openMesh;
+
+            // spawna os produtos DENTRO da caixa
+            const bx = box.body.position.x;
+            const bz = box.body.position.z;
+            for (let i = 0; i < box.qty; i++) {
+                const px = bx + ((i % 3) - 1) * 0.28;
+                const pz = bz + (Math.floor((i % 6) / 3) - 0.5) * 0.30;
+                const py = 0.55 + Math.floor(i / 6) * 0.22;
+                spawnProd(box.key, px, py, pz);
+            }
+            playOpen();
+        }
+
+        // ===== CLIENTES =====
+        const customers = [];
+        let lastSpawn = 0;
+        function human() {
+            const g = new THREE.Group();
+            const skin = 0xfcd34d, shirts = [0x2563eb, 0x16a34a, 0x9333ea, 0xea580c, 0x0284c7];
+            const shirt = shirts[Math.floor(Math.random() * shirts.length)];
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(.1, .12, .8, 8), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+            leg.position.set(-.13, .4, 0); g.add(leg);
+            const leg2 = leg.clone(); leg2.position.x = .13; g.add(leg2);
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(.26, .3, .65, 10), new THREE.MeshStandardMaterial({ color: shirt }));
+            torso.position.y = 1; g.add(torso);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(.22, 12, 12), new THREE.MeshStandardMaterial({ color: skin }));
+            head.position.y = 1.48; g.add(head);
+            return g;
+        }
+        function spawnCust() {
+            if (!storeOpen || customers.length >= 6) return;
+            const avail = products.filter(p => !p.reserved && !p.scanned && p.body.position.y > .3 && !p.heldBy);
+            if (avail.length < 1) return;
+            const qty = Math.min(1 + Math.floor(Math.random() * 2.5), avail.length);
+            const list = [], used = new Set();
+            while (list.length < qty) {
+                const p = avail[Math.floor(Math.random() * avail.length)];
+                if (!used.has(p)) { used.add(p); p.reserved = true; list.push(p); }
+            }
+            const mesh = human();
+            const sx = (Math.random() - .5) * 6;
+            mesh.position.set(sx, 0, 28); scene.add(mesh);
+            const body = new CANNON.Body({ mass: 70, shape: new CANNON.Cylinder(.3, .3, 1.5, 8), material: defMat, fixedRotation: true });
+            body.position.set(sx, .75, 28); body.linearDamping = .25; world.addBody(body);
+            customers.push({ mesh, body, list, carried: [], state: 'enter', targetProduct: null });
+        }
+        function trySpawn(t) { if (!storeOpen) return; if (t - lastSpawn > 3800) { spawnCust(); lastSpawn = t; } }
+        function updCust(dt) {
+            const line = customers.filter(c => ['toCheckout', 'place', 'wait'].includes(c.state));
+            for (let i = customers.length - 1; i >= 0; i--) {
+                const c = customers[i];
+                c.mesh.position.copy(c.body.position); c.mesh.position.y = c.body.position.y - .75;
+                let target = null;
+                if (c.state === 'enter') { target = new THREE.Vector3(0, 0, 11.5); if (c.mesh.position.z < 12.5) { c.state = 'shop'; c.targetProduct = c.list[0]; } }
+                else if (c.state === 'shop') {
+                    if (c.carried.length >= c.list.length) c.state = 'toCheckout';
+                    else {
+                        c.targetProduct = c.list.find(p => !c.carried.includes(p) && p.body && !p.scanned);
+                        if (!c.targetProduct) c.state = 'toCheckout';
+                        else {
+                            const pp = c.targetProduct.body.position;
+                            target = new THREE.Vector3(pp.x + (pp.x > 0 ? -1.4 : 1.4), 0, pp.z);
+                            if (c.mesh.position.distanceTo(target) < 1.35) {
+                                c.carried.push(c.targetProduct); c.targetProduct.heldBy = c;
+                                c.targetProduct.body.type = CANNON.Body.KINEMATIC; c.targetProduct = null;
+                            }
+                        }
+                    }
+                } else if (c.state === 'toCheckout' || c.state === 'place' || c.state === 'wait') {
+                    const idx = line.indexOf(c);
+                    target = new THREE.Vector3(0, 0, 5.8 - idx * 1.4);
+                    c.carried.forEach((prod, j) => {
+                        if (prod.body && !prod.scanned) {
+                            const off = (j - (c.carried.length - 1) / 2) * .26;
+                            prod.body.position.set(c.mesh.position.x + off, 1.1, c.mesh.position.z - .4);
+                            prod.body.velocity.set(0, 0, 0);
+                        }
+                    });
+                    if (c.mesh.position.distanceTo(target) < .5) {
+                        if (c.state === 'toCheckout') c.state = 'place';
+                        if (c.state === 'place') {
+                            const still = c.carried.filter(p => p.body && p.body.position.z > 6.4);
+                            if (still.length > 0) {
+                                const p = still[0]; p.body.type = CANNON.Body.DYNAMIC;
+                                p.body.position.set((Math.random() - .5) * .9, 1.2, 7.2); p.body.velocity.set(0, 0, 0); p.heldBy = null;
+                            } else c.state = 'wait';
+                        }
+                    }
+                } else if (c.state === 'exit') {
+                    target = new THREE.Vector3(10, 0, 30);
+                    if (c.mesh.position.z > 26) { scene.remove(c.mesh); world.remove(c.body); c.list.forEach(p => { if (p) p.reserved = false; }); customers.splice(i, 1); continue; }
+                }
+                if (target) {
+                    const dir = new THREE.Vector3().subVectors(target, c.mesh.position); dir.y = 0;
+                    if (dir.length() > .2) {
+                        dir.normalize();
+                        const spd = (c.state === 'enter' || c.state === 'exit') ? 8.5 : 7;
+                        c.body.velocity.x = dir.x * spd; c.body.velocity.z = dir.z * spd;
+                        c.mesh.lookAt(target.x, c.mesh.position.y, target.z);
+                    } else { c.body.velocity.x = 0; c.body.velocity.z = 0; }
+                } else { c.body.velocity.x = 0; c.body.velocity.z = 0; }
+            }
+        }
+
+        // ===== JOGADOR =====
+        let mf = false, mb = false, ml = false, mr = false, yaw = Math.PI, pitch = 0, locked = false, orderOpen = false, held = null, started = false;
+
+        const PLAYER_HEIGHT = 2.05;
+        const pBody = new CANNON.Body({ mass: 80, shape: new CANNON.Sphere(.45), material: defMat });
+        pBody.position.set(0, PLAYER_HEIGHT, 9.5);
+        pBody.linearDamping = .9;
+        world.addBody(pBody);
+
+        const startEl = document.getElementById('start');
+        const btn = document.getElementById('btn');
+        btn.onclick = e => { e.preventDefault(); e.stopPropagation(); startGame(); };
+        startEl.onclick = e => { if (e.target === startEl || e.target.tagName === 'H1' || e.target.tagName === 'P') startGame(); };
+        function startGame() {
+            if (started) return; started = true; startEl.style.display = 'none';
+            vp.requestPointerLock();
+        }
+        document.addEventListener('pointerlockchange', () => {
+            locked = document.pointerLockElement === vp;
+            if (locked) { startEl.style.display = 'none'; started = true; }
+            else if (started && !orderOpen) { startEl.style.display = 'flex'; started = false; }
+        });
+        document.addEventListener('pointerlockerror', () => { alert('Clique novamente em INICIAR TURNO'); started = false; startEl.style.display = 'flex'; });
+
+        document.addEventListener('mousemove', e => {
+            if (!locked || orderOpen) return;
+            yaw -= e.movementX * .002; pitch = Math.max(-1.3, Math.min(1.3, pitch - e.movementY * .002));
+        });
+        document.addEventListener('keydown', e => {
+            if (orderOpen) return;
+            if (e.code === 'KeyW') mf = true; if (e.code === 'KeyS') mb = true;
+            if (e.code === 'KeyA') ml = true; if (e.code === 'KeyD') mr = true;
+            if (e.code === 'KeyE') interact(); if (e.code === 'KeyG') drop();
+            if (e.code === 'KeyR') throwIt(); if (e.code === 'KeyM') scan();
+        });
+        document.addEventListener('keyup', e => {
+            if (e.code === 'KeyW') mf = false; if (e.code === 'KeyS') mb = false;
+            if (e.code === 'KeyA') ml = false; if (e.code === 'KeyD') mr = false;
+        });
+        document.addEventListener('mousedown', e => { if (locked && !orderOpen && e.button === 0) interact(); });
+        vp.addEventListener('contextmenu', e => e.preventDefault());
+
+        document.getElementById('close').onclick = () => { orderOpen = false; document.getElementById('order').style.display = 'none'; vp.requestPointerLock(); };
+        document.querySelectorAll('.pbtn').forEach(b => {
+            b.onclick = () => {
+                const k = b.dataset.k; orderOpen = false; document.getElementById('order').style.display = 'none'; vp.requestPointerLock();
+                setTimeout(() => dropBoxFromSky(k, 8), 4000); playBeep();
+            };
+        });
+
+        const ray = new THREE.Raycaster();
+        const prompt = document.getElementById('prompt');
+        function dir() { const d = new THREE.Vector3(0, 0, -1); d.applyQuaternion(cam.quaternion); return d; }
+
+        function hover() {
+            if (orderOpen) { prompt.style.display = 'none'; return; }
+
+            // Computador
+            if (cam.position.distanceTo(new THREE.Vector3(15.5, 1.2, 8)) < 2.6) {
+                prompt.style.display = 'block'; prompt.textContent = 'E = Abrir Terminal de Pedidos'; return;
+            }
+            // Placa
+            if (cam.position.distanceTo(new THREE.Vector3(0, 2.9, 14.5)) < 3.8) {
+                prompt.style.display = 'block';
+                prompt.textContent = storeOpen ? 'E = Fechar a Loja' : 'E = Abrir a Loja (após arrumar)';
+                return;
+            }
+
+            // Segurando caixa
+            if (heldBox) {
+                prompt.style.display = 'block';
+                prompt.textContent = 'E = Colocar caixa no chão  |  G = Soltar';
+                return;
+            }
+
+            // Segurando produto
+            if (held) {
+                prompt.style.display = 'block';
+                prompt.textContent = 'E = Colocar  |  G = Soltar  |  R = Arremessar  |  M = Escanear';
+                return;
+            }
+
+            // Olhando para caixa fechada → pegar
+            // Olhando para caixa aberta → nada especial (produtos)
+            ray.setFromCamera(new THREE.Vector2(0, 0), cam);
+
+            // Primeiro verifica caixas
+            for (const box of boxes) {
+                if (box.open) continue; // já aberta
+                const dist = cam.position.distanceTo(box.mesh.position);
+                if (dist < 3.5) {
+                    // raycast simples por distância
+                    prompt.style.display = 'block';
+                    if (box.body.position.y < 0.6) {
+                        prompt.textContent = 'E = Pegar caixa  ou  E = Abrir caixa';
+                    } else {
+                        prompt.textContent = 'E = Pegar caixa';
+                    }
+                    return;
+                }
+            }
+
+            // Produtos
+            const hits = ray.intersectObjects(products.map(p => p.mesh), true);
+            if (hits.length && hits[0].distance < 4.3) {
+                let o = hits[0].object;
+                while (o.parent && o.parent !== scene) o = o.parent;
+                const p = products.find(pr => pr.mesh === o);
+                if (p && !p.scanned) {
+                    prompt.style.display = 'block';
+                    prompt.textContent = `E = Pegar ${p.info.name} ($${p.info.price.toFixed(2)})`;
+                    return;
+                }
+            }
+
+            prompt.style.display = 'none';
+        }
+
+        function interact() {
+            // Computador
+            if (cam.position.distanceTo(new THREE.Vector3(15.5, 1.2, 8)) < 2.6) {
+                orderOpen = true; document.getElementById('order').style.display = 'block'; document.exitPointerLock(); return;
+            }
+            // Placa
+            if (cam.position.distanceTo(new THREE.Vector3(0, 2.9, 14.5)) < 3.8) {
+                if (!storeOpen) {
+                    if (stocked < 6) { prompt.textContent = 'Arrume pelo menos 6 produtos antes de abrir!'; return; }
+                    storeOpen = true; signP2.material.map = openT; signP2.material.needsUpdate = true;
+                    document.getElementById('status').textContent = 'LOJA ABERTA'; document.getElementById('status').className = 'open';
+                    document.querySelector('#hud-l .v').textContent = 'Atenda os clientes'; playBeep();
+                } else {
+                    storeOpen = false; signP2.material.map = closedT; signP2.material.needsUpdate = true;
+                    document.getElementById('status').textContent = 'LOJA FECHADA'; document.getElementById('status').className = 'closed';
+                }
+                return;
+            }
+
+            // Se está segurando uma caixa → colocar no chão
+            if (heldBox) {
+                heldBox.body.type = CANNON.Body.DYNAMIC;
+                heldBox.body.wakeUp();
+                heldBox.body.velocity.set(0, -1, 0);
+                // depois de um tempo trava
+                setTimeout(() => {
+                    if (heldBox && heldBox.body.position.y < 0.6) {
+                        heldBox.body.mass = 0;
+                        heldBox.body.type = CANNON.Body.STATIC;
+                        heldBox.body.velocity.set(0, 0, 0);
+                    }
+                }, 600);
+                heldBox = null;
+                playGrab();
+                return;
+            }
+
+            // Se está segurando produto → colocar
+            if (held) {
+                held.body.type = CANNON.Body.DYNAMIC;
+                held.body.wakeUp();
+                if (held.body.position.y > .45 && held.body.position.z < 13) {
+                    stocked++; document.getElementById('prog').textContent = stocked + ' produtos estocados';
+                }
+                held = null; playGrab(); return;
+            }
+
+            // Tentar interagir com caixa
+            let closestBox = null;
+            let closestDist = 3.5;
+            for (const box of boxes) {
+                if (box.open) continue;
+                const d = cam.position.distanceTo(box.mesh.position);
+                if (d < closestDist) { closestDist = d; closestBox = box; }
+            }
+
+            if (closestBox) {
+                // Se a caixa está no chão → prioridade de abrir
+                if (closestBox.body.position.y < 0.7) {
+                    // Decide: se olhar mais para baixo ou perto → abrir, senão pegar
+                    // Por simplicidade: se estiver bem perto e no chão, abre. Shift ou segunda vez pega.
+                    // Vamos fazer: E perto = abrir se no chão, senão pegar
+                    openBox(closestBox);
+                    return;
+                } else {
+                    // pegar a caixa
+                    heldBox = closestBox;
+                    closestBox.body.type = CANNON.Body.KINEMATIC;
+                    playGrab();
+                    return;
+                }
+            }
+
+            // Pegar produto
+            ray.setFromCamera(new THREE.Vector2(0, 0), cam);
+            const hits = ray.intersectObjects(products.map(p => p.mesh), true);
+            if (hits.length && hits[0].distance < 4.3) {
+                let o = hits[0].object;
+                while (o.parent && o.parent !== scene) o = o.parent;
+                const p = products.find(pr => pr.mesh === o);
+                if (p && !p.scanned) {
+                    held = p; held.body.type = CANNON.Body.KINEMATIC; playGrab();
+                }
+            }
+        }
+
+        function drop() {
+            if (heldBox) {
+                heldBox.body.type = CANNON.Body.DYNAMIC;
+                heldBox.body.wakeUp();
+                heldBox = null;
+                return;
+            }
+            if (!held) return;
+            held.body.type = CANNON.Body.DYNAMIC;
+            held.body.wakeUp();
+            held = null;
+        }
+        function throwIt() {
+            if (heldBox) {
+                const d = dir();
+                heldBox.body.type = CANNON.Body.DYNAMIC;
+                heldBox.body.wakeUp();
+                heldBox.body.velocity.set(d.x * 9, d.y * 9 + 2, d.z * 9);
+                heldBox = null;
+                return;
+            }
+            if (!held) return;
+            const d = dir();
+            held.body.type = CANNON.Body.DYNAMIC;
+            held.body.wakeUp();
+            held.body.velocity.set(d.x * 11, d.y * 11 + 2.5, d.z * 11);
+            held = null;
+        }
+
+        let cash = 0, checks = 0;
+        function scan() {
+            let t = held;
+            if (!t) t = products.find(p => !p.scanned && p.body.position.distanceTo(new CANNON.Vec3(0, 1.15, 7.2)) < .95);
+            if (!t || t.scanned) return;
+            t.scanned = true; cash += t.info.price; checks++; playBeep();
+            document.getElementById('cash-v').textContent = cash.toFixed(2);
+            document.getElementById('tot').textContent = cash.toFixed(2);
+            const list = document.getElementById('ilist');
+            if (checks === 1) list.innerHTML = '';
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${t.info.name}</span><span>$${t.info.price.toFixed(2)}</span>`;
+            list.appendChild(li);
+            if (held === t) held = null;
+            scene.remove(t.mesh); world.remove(t.body);
+            const idx = products.indexOf(t); if (idx > -1) products.splice(idx, 1);
+            customers.forEach(c => {
+                if (c.carried.includes(t) || c.list.includes(t)) {
+                    c.carried = c.carried.filter(p => p !== t);
+                    if (!c.carried.some(p => p && !p.scanned) && (c.state === 'wait' || c.state === 'place')) c.state = 'exit';
+                }
+            });
+            scanner.material.color.setHex(0x22c55e);
+            setTimeout(() => scanner.material.color.setHex(0xef4444), 280);
+        }
+        function autoScan() {
+            products.forEach(p => {
+                if (!p.scanned && p.body.position.distanceTo(new THREE.Vector3(0, 1.15, 7.2)) < .5) {
+                    held = p; scan();
+                }
+            });
+        }
+
+        let mins = 8 * 60;
+        function clock(dt) {
+            mins += dt * .55; if (mins >= 24 * 60) mins = 0;
+            const h = Math.floor(mins / 60) % 24, m = Math.floor(mins % 60);
+            document.getElementById('time').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        const clk = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clk.getDelta(), .05);
+            const t = clk.elapsedTime * 1000;
+            world.step(1 / 60, dt, 3);
+
+            if (locked && !orderOpen) {
+                const mv = new THREE.Vector3();
+                if (mf) mv.z -= 1; if (mb) mv.z += 1; if (ml) mv.x -= 1; if (mr) mv.x += 1;
+                mv.normalize(); mv.applyEuler(new THREE.Euler(0, yaw, 0, 'YXZ'));
+                pBody.velocity.x = mv.x * 8.2; pBody.velocity.z = mv.z * 8.2;
+            }
+
+            cam.position.copy(pBody.position);
+            cam.position.y += 0.85;
+            cam.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+
+            // Carregar caixa
+            if (heldBox) {
+                const pos = cam.position.clone().add(dir().multiplyScalar(1.8));
+                pos.y = cam.position.y - 0.4;
+                heldBox.body.position.copy(pos);
+                heldBox.body.velocity.set(0, 0, 0);
+                heldBox.mesh.position.copy(pos);
+            }
+
+            // Carregar produto
+            if (held) {
+                const pos = cam.position.clone().add(dir().multiplyScalar(1.45));
+                held.body.position.copy(pos);
+                held.body.velocity.set(0, 0, 0);
+            }
+
+            products.forEach(p => {
+                p.mesh.position.copy(p.body.position);
+                p.mesh.quaternion.copy(p.body.quaternion);
+            });
+
+            // sincroniza caixas que não estão sendo seguradas
+            boxes.forEach(box => {
+                if (box !== heldBox) {
+                    box.mesh.position.copy(box.body.position);
+                    box.mesh.quaternion.copy(box.body.quaternion);
+                }
+            });
+
+            updDoors(dt); updCust(dt); trySpawn(t); hover(); autoScan(); clock(dt);
+            ren.render(scene, cam);
+        }
+        window.addEventListener('resize', () => {
+            cam.aspect = innerWidth / innerHeight;
+            cam.updateProjectionMatrix();
+            ren.setSize(innerWidth, innerHeight);
+        });
+        animate();
+    </script>
+</body>
+
+</html>
